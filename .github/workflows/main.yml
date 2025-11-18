@@ -1,18 +1,34 @@
 name: Simple CI Pipeline
 
+# Defines when the workflow should run
 on:
   push:
-    branches: [ master ]
+    branches: [ master, bugfix/* ]
   pull_request:
     branches: [ master ]
 
+# Defines the jobs that will run
 jobs:
   build_and_test:
+    # Specifies the runner environment
     runs-on: ubuntu-latest
+    
+    # Steps for the job
     steps:
     - name: Checkout Code
+      # Uses a standard GitHub Action to pull the code
       uses: actions/checkout@v4
+      
     - name: Simulate Build Step
-      run: echo "Code built successfully!"
-    - name: Simulate Test Step
-      run: echo "Running automated tests..." && exit 0 # Change 'exit 0' to 'exit 1' to simulate a failure
+      # Simulates the compilation or setup phase
+      run: |
+        echo "Starting build process..."
+        echo "Code built successfully!"
+        
+    - name: Simulate Test Step (FAILURE INTENDED)
+      # This step simulates running automated tests.
+      # 'exit 1' causes the job to immediately fail, simulating a test failure.
+      run: |
+        echo "Running automated tests..."
+        echo "ERROR: One or more tests failed!"
+        exit 1
