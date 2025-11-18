@@ -1,35 +1,55 @@
-name: Simple CI Pipeline
+name: Full CI/CD Pipeline (Code & Infrastructure)
 
-# Defines when the workflow should run
 on:
   push:
-    # Runs on changes to master, or any branch starting with 'bugfix/'
-    branches: [ master, bugfix/* ]
-  pull_request:
     branches: [ master ]
 
-# Defines the jobs that will run
 jobs:
+  # 1. Existing job for code build and test
   build_and_test:
-    # Specifies the runner environment
     runs-on: ubuntu-latest
-    
-    # Steps for the job
     steps:
     - name: Checkout Code
-      # Uses a standard GitHub Action to pull the code
+      uses: actions/checkout@v4
+    - name: Simulate Build Step
+      run: echo "Code built successfully!"
+    - name: Simulate Test Step
+      run: |
+        echo "Tests passed successfully!"
+        exit 0 # Passes
+
+  # --- New Job for IaC Deployment ---
+  infrastructure_deployment:
+    # Requires build_and_test to pass first
+    needs: build_and_test 
+    runs-on: ubuntu-latest
+    
+    # Needs Docker to be available for the terraform-docker provider
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+        
+    steps:
+    - name: Checkout Code
       uses: actions/checkout@v4
       
-    - name: Simulate Build Step
-      # Simulates the compilation or setup phase
-      run: |
-        echo "Starting build process..."
-        echo "Code built successfully!"
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.0.0 # Specify a compatible version
         
-    - name: Simulate Test Step (BUG FIXED)
-      # This step simulates running automated tests and now passes.
-      # 'exit 0' ensures the job completes successfully.
-      run: |
-        echo "Running automated tests..."
-        echo "Tests passed successfully!"
-        exit 0  # <--- Ensures the pipeline passes
+    - name: Terraform Init (IaC Setup)
+      # Initializes the Terraform directory (within the subfolder)
+      run: terraform init
+      working-directory: ./terraform-docker-project
+      
+    - name: Terraform Plan (Review Change)
+      # Checks syntax and generates the execution plan
+      run: terraform plan
+      working-directory: ./terraform-docker-project
+      
+    - name: Terraform Apply (Provision Infrastructure)
+      # Executes the plan, creating the Docker container locally (on the runner)
+      run: terraform apply -auto-approve
+      working-directory: ./terraform-docker-project
