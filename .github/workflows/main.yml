@@ -1,55 +1,79 @@
-name: Full CI/CD Pipeline (Code & Infrastructure)
+name: Full Continuous Delivery Pipeline (Code, IaC & Config)
 
 on:
+  # Triggers the workflow on pushes to the master branch
   push:
     branches: [ master ]
 
 jobs:
-  # 1. Existing job for code build and test
+  # 1. APPLICATION CODE CHECK (CI)
   build_and_test:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-    - name: Simulate Build Step
-      run: echo "Code built successfully!"
-    - name: Simulate Test Step
-      run: |
-        echo "Tests passed successfully!"
-        exit 0 # Passes
-
-  # --- New Job for IaC Deployment ---
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Simulate Build and Unit Tests
+        run: |
+          echo "Building application code..."
+          echo "Running unit tests..."
+          exit 0 # Assumes tests pass
+  
+  # 2. INFRASTRUCTURE PROVISIONING (IaC)
   infrastructure_deployment:
-    # Requires build_and_test to pass first
+    # This job only runs if the previous job passed
     needs: build_and_test 
     runs-on: ubuntu-latest
     
-    # Needs Docker to be available for the terraform-docker provider
+    # Needs Docker to be available for the terraform-docker provider (dind)
     services:
       docker:
         image: docker:dind
         options: --privileged
         
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-      
-    - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.0.0 # Specify a compatible version
+      - name: Checkout Code
+        uses: actions/checkout@v4
         
-    - name: Terraform Init (IaC Setup)
-      # Initializes the Terraform directory (within the subfolder)
-      run: terraform init
-      working-directory: ./terraform-docker-project
-      
-    - name: Terraform Plan (Review Change)
-      # Checks syntax and generates the execution plan
-      run: terraform plan
-      working-directory: ./terraform-docker-project
-      
-    - name: Terraform Apply (Provision Infrastructure)
-      # Executes the plan, creating the Docker container locally (on the runner)
-      run: terraform apply -auto-approve
-      working-directory: ./terraform-docker-project
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.0.0 # Use a stable version
+          
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform-docker-project
+        
+      - name: Terraform Plan
+        # Runs the plan to show changes before applying
+        run: terraform plan
+        working-directory: ./terraform-docker-project
+        
+      - name: Terraform Apply
+        # Provisions the Docker container locally (on the runner)
+        run: terraform apply -auto-approve
+        working-directory: ./terraform-docker-project
+
+  # 3. CONFIGURATION MANAGEMENT (Ansible)
+  configure_infrastructure:
+    # This job only runs if both previous jobs succeeded
+    needs: infrastructure_deployment
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          
+      - name: Install Ansible
+        run: pip install ansible
+        
+      - name: Run Configuration Playbook
+        # Executes the playbook to configure software (like cowsay/nginx)
+        # It uses the local connection to configure the GitHub runner itself
+        run: ansible-playbook -i ansible-config-project/inventory.ini ansible-config-project/site.yml
+        working-directory: ${{ github.workspace }}
