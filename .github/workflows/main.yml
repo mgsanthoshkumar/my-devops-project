@@ -3,6 +3,7 @@ name: Simple CI Pipeline
 # Defines when the workflow should run
 on:
   push:
+    # Runs on changes to master, or any branch starting with 'bugfix/'
     branches: [ master, bugfix/* ]
   pull_request:
     branches: [ master ]
@@ -25,10 +26,10 @@ jobs:
         echo "Starting build process..."
         echo "Code built successfully!"
         
-    - name: Simulate Test Step (FAILURE INTENDED)
-      # This step simulates running automated tests.
-      # 'exit 1' causes the job to immediately fail, simulating a test failure.
+    - name: Simulate Test Step (BUG FIXED)
+      # This step simulates running automated tests and now passes.
+      # 'exit 0' ensures the job completes successfully.
       run: |
         echo "Running automated tests..."
-        echo "ERROR: One or more tests failed!"
-        exit 1
+        echo "Tests passed successfully!"
+        exit 0  # <--- Ensures the pipeline passes
