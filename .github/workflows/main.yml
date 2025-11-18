@@ -1,0 +1,18 @@
+name: Simple CI Pipeline
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    - name: Simulate Build Step
+      run: echo "Code built successfully!"
+    - name: Simulate Test Step
+      run: echo "Running automated tests..." && exit 0 # Change 'exit 0' to 'exit 1' to simulate a failure
